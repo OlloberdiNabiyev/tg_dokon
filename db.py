@@ -5,6 +5,12 @@ cursor = conn.cursor()
 
 cursor.execute("PRAGMA foreign_keys = ON")
 
+cursor.execute("""
+            CREATE TABLE IF NOT EXISTS admins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE
+            )
+""")
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS categories (
@@ -25,5 +31,13 @@ CREATE TABLE IF NOT EXISTS products (
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 )
 """)
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS cart (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    product_id INTEGER,
+    quantity INTEGER
+)""")
 
 conn.commit()
