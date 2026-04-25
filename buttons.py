@@ -131,12 +131,12 @@ def product_inline_keyboard(product_id, count, price):
 
     markup.row(
         InlineKeyboardButton("➖", callback_data=f"minus_{product_id}_{count}"),
-        InlineKeyboardButton(f"{count}", callback_data="count"),
+        InlineKeyboardButton(f"{count}", callback_data="ignore"),
         InlineKeyboardButton("➕", callback_data=f"plus_{product_id}_{count}")
     )
 
     markup.row(
-        InlineKeyboardButton(f"💰 {total_price} so'm", callback_data="total")
+        InlineKeyboardButton(f"💰 {total_price} so'm", callback_data="ignore")
     )
 
     markup.row(

@@ -439,7 +439,7 @@ def callback_handler(call):
         elif action == "minus" and count > 1:
             count -= 1
 
-        bot.edit_message_reply_markup(
+        bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             reply_markup=product_inline_keyboard(product_id, count, price)
