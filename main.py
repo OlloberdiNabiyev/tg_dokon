@@ -482,10 +482,10 @@ def callback_handler(call):
         cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
         conn.commit()
 
-        bot.edit_message_text(
-            text="🗑 Savatcha tozalandi",
+        bot.edit_message_reply_markup(
             chat_id=call.message.chat.id,
-            message_id=call.message.message_id
+            message_id=call.message.message_id,
+            reply_markup=product_inline_keyboard(product_id, count, price)
         )
 
     elif data == "checkout":
