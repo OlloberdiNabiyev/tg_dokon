@@ -440,6 +440,7 @@ def callback_handler(call):
             count -= 1
 
         bot.edit_message_text(
+            text="🛒 Mahsulot",
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             reply_markup=product_inline_keyboard(product_id, count, price)
