@@ -425,22 +425,22 @@ def callback_handler(call):
     user_id = call.from_user.id
 
     cursor = conn.cursor()
-
     if data.startswith("plus_") or data.startswith("minus_"):
-        action, product_id, count = data.split("_")
-        product_id = int(product_id)
-        count = int(count)
 
-        cursor.execute("SELECT price FROM products WHERE id = ?", (product_id,))
-        price = cursor.fetchone()[0]
+        parts = data.split("_")
+        action = parts[0]
+        product_id = int(parts[1])
+        count = int(parts[2])
 
         if action == "plus":
             count += 1
-        elif action == "minus" and count > 1:
-            count -= 1
+        else:
+            count = max(1, count - 1)
 
-        bot.edit_message_text(
-            text="🛒 Mahsulot",
+        cursor.execute("SELECT price FROM products WHERE id=?", (product_id,))
+        price = cursor.fetchone()[0]
+
+        bot.edit_message_reply_markup(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             reply_markup=product_inline_keyboard(product_id, count, price)
