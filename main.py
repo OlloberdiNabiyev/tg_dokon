@@ -719,5 +719,10 @@ def get_district(message, name, phone, region):
     }
 
     bot.send_message(message.chat.id, text, reply_markup=markup)
-    
-bot.infinity_polling()
+
+if __name__ == "__main__":
+    while True:
+        try:
+            bot.infinity_polling(timeout=10, long_polling_timeout=5)
+        except Exception as e:
+            print("ERROR:", e)
