@@ -1,10 +1,26 @@
 
 from telebot import TeleBot
-from config import TOKEN, is_admin
+from config import TOKEN, is_admin,USER_ADMIN
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from buttons import *
 from db import cursor,conn
+from regions import districts,regions
 bot = TeleBot(TOKEN)
+bot.user_data = {}
 
+# func
+def get_districts_by_region(region_name):
+    region_id = None
+
+    for r in regions:
+        if r["name"] == region_name:
+            region_id = r["id"]
+            break
+
+    if not region_id:
+        return []
+
+    return [d["name"] for d in districts if d["region_id"] == region_id]
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -408,9 +424,8 @@ def callback_handler(call):
     data = call.data
     user_id = call.from_user.id
 
-    cursor = conn.cursor()  # 🔥 yangi cursor
+    cursor = conn.cursor()
 
-    # ➕ ➖
     if data.startswith("plus_") or data.startswith("minus_"):
         action, product_id, count = data.split("_")
         product_id = int(product_id)
@@ -430,7 +445,6 @@ def callback_handler(call):
             reply_markup=product_inline_keyboard(product_id, count, price)
         )
 
-    # 🛒 ADD
     elif data.startswith("add_"):
         _, product_id, count = data.split("_")
         product_id = int(product_id)
@@ -473,32 +487,77 @@ def callback_handler(call):
             call.message.message_id
         )
 
-    # 🛍 CHECKOUT
     elif data == "checkout":
         cursor.execute("""
-            SELECT p.name, p.price, c.quantity
-            FROM cart c
-            JOIN products p ON c.product_id = p.id
-            WHERE c.user_id = ?
+            SELECT 1 FROM cart WHERE user_id = ?
         """, (user_id,))
 
-        items = cursor.fetchall()
-
-        if not items:
+        if not cursor.fetchone():
             bot.answer_callback_query(call.id, "❌ Savatcha bo‘sh")
             return
 
-        total = sum(price * qty for name, price, qty in items)
+        bot.answer_callback_query(call.id)
 
-        bot.send_message(
+        msg = bot.send_message(
             call.message.chat.id,
-            f"✅ Buyurtma qabul qilindi!\n💰 Jami: {total} so'm"
+            "👤 Ismingizni kiriting:",
+            reply_markup=back_keyboard()
         )
+
+        bot.register_next_step_handler(msg, get_name)
+
+    elif data == "confirm_order":
+        data_user = bot.user_data.get(user_id)
+
+        if not data_user:
+            bot.answer_callback_query(call.id, "❌ Ma'lumot topilmadi")
+            return
+
+        name = data_user["name"]
+        phone = data_user["phone"]
+        address = data_user["address"]
+        items = data_user["items"]
+        total = data_user["total"]
+
+        text = "🆕 YANGI BUYURTMA\n\n"
+        text += f"👤 {name}\n📞 {phone}\n📍 {address}\n\n"
+
+        for product_id, pname, price, qty in items:
+            text += f"{pname} x{qty} = {price * qty} so'm\n"
+
+            cursor.execute("""
+                UPDATE products
+                SET quantity = quantity - ?
+                WHERE id = ?
+            """, (qty, product_id))
+
+        text += f"\n💰 Jami: {total} so'm"
+
+        conn.commit()
+
+        bot.send_message(USER_ADMIN, text)
 
         cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
         conn.commit()
 
-    # 🔙 BACK
+        bot.send_message(
+            call.message.chat.id,
+            "✅ Buyurtma qabul qilindi!\n📞 Adminlar tez orada bog‘lanadi",
+            reply_markup=user_keyboard()
+        )
+
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass
+    elif data == "cancel_order":
+        bot.send_message(call.message.chat.id, "❌ Buyurtma bekor qilindi",reply_markup=user_keyboard())
+
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass
+
     elif data == "back_to_menu":
         bot.delete_message(call.message.chat.id, call.message.message_id)
         bot.send_message(call.message.chat.id, "🏠 Bosh menyu")
@@ -541,5 +600,124 @@ def view_cart(message):
         reply_markup=cart_inline_keyboard()
     )
 
+def get_name(message):
+    if message.text == '🔙orqaga':
+        bot.send_message(message.chat.id, "Asosiy menyuga qaytdingiz!", reply_markup=user_keyboard())
+        return
+
+    name = message.text
+
+
+    msg = bot.send_message(
+        message.chat.id,
+        "📞 Telefon raqamingizni yuboring:",
+        reply_markup=phone_keyboard()
+    )
+    bot.register_next_step_handler(msg, get_phone, name)
+
+def get_phone(message, name):
+    if message.text == '⬅️ Orqaga':
+        bot.send_message(message.chat.id, "Asosiy menyuga qaytdingiz!", reply_markup=user_keyboard())
+        return
+    
+    if not message.contact:
+        msg = bot.send_message(message.chat.id, "❌ Iltimos, tugma orqali raqamni yuboring!", reply_markup=phone_keyboard())
+        bot.register_next_step_handler(msg, get_phone, name)
+        return
+
+    phone = message.contact.phone_number
+
+    msg = bot.send_message(
+        message.chat.id,
+        "📍 Viloyatingizni tanlang:",
+        reply_markup=region_keyboard()
+    )
+
+    bot.register_next_step_handler(msg, get_region, name, phone)
+
+def get_region(message, name, phone):
+    if message.text == "🔙 Orqaga":
+        bot.send_message(message.chat.id, "Asosiy menyuga qaytdingiz!", reply_markup=user_keyboard())
+        return
+
+    region = message.text
+
+    district_list = get_districts_by_region(region)
+
+    if not district_list:
+        msg = bot.send_message(message.chat.id, "❌ Tugmadan tanlang")
+        return bot.register_next_step_handler(msg, get_region, name, phone)
+
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    for d in district_list:
+        markup.add(d)
+
+    markup.add("⬅️ Viloyatga qaytish")
+
+    msg = bot.send_message(
+        message.chat.id,
+        "🏙 Tumanni tanlang:",
+        reply_markup=markup
+    )
+
+    bot.register_next_step_handler(msg, get_district, name, phone, region)
+
+def get_district(message, name, phone, region):
+    if message.text == "⬅️ Viloyatga qaytish":
+        msg = bot.send_message(
+            message.chat.id,
+            "📍 Viloyatni tanlang:",
+            reply_markup=region_keyboard()
+        )
+        bot.register_next_step_handler(msg, get_region, name, phone)
+        return
+
+    district = message.text
+    user_id = message.from_user.id
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT p.id, p.name, p.price, c.quantity
+        FROM cart c
+        JOIN products p ON c.product_id = p.id
+        WHERE c.user_id = ?
+    """, (user_id,))
+
+    items = cursor.fetchall()
+
+    if not items:
+        bot.send_message(message.chat.id, "❌ Savatcha bo‘sh")
+        return
+
+    total = sum(price * qty for _, _, price, qty in items)
+
+    address = f"{region}, {district}"
+
+    text = "🧾 BUYURTMANI TASDIQLANG:\n\n"
+    text += f"👤 {name}\n📞 {phone}\n📍 {address}\n\n"
+
+    for _, pname, price, qty in items:
+        text += f"{pname} x{qty} = {price * qty} so'm\n"
+
+    text += f"\n💰 Jami: {total} so'm"
+
+    markup = InlineKeyboardMarkup()
+    markup.add(
+        InlineKeyboardButton("✅ Tasdiqlash", callback_data="confirm_order"),
+        InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_order")
+    )
+
+    bot.user_data = getattr(bot, "user_data", {})
+    bot.user_data[user_id] = {
+        "name": name,
+        "phone": phone,
+        "address": address,
+        "items": items,
+        "total": total
+    }
+
+    bot.send_message(message.chat.id, text, reply_markup=markup)
 if __name__ == '__main__':
     bot.infinity_polling()

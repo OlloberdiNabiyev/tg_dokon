@@ -1,7 +1,7 @@
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from db import cursor
-from bot import bot
-
+from main import bot
+from regions import regions,districts
 def admin_keyboard():
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(KeyboardButton('📦 Mahsulotlar'))
@@ -159,5 +159,24 @@ def cart_inline_keyboard():
     markup.row(
         InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_menu")
     )
+
+    return markup
+
+def region_keyboard():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    
+    for r in regions:
+        markup.add(KeyboardButton(r["name"]))
+    markup.add(KeyboardButton("🔙 Orqaga"))
+    return markup
+
+
+def phone_keyboard():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    btn = KeyboardButton("📞 Raqamni yuborish", request_contact=True)
+    markup.add(btn)
+
+    markup.add("⬅️ Orqaga")
 
     return markup
