@@ -719,5 +719,5 @@ def get_district(message, name, phone, region):
     }
 
     bot.send_message(message.chat.id, text, reply_markup=markup)
-if __name__ == '__main__':
-    bot.infinity_polling()
+    
+bot.infinity_polling()
