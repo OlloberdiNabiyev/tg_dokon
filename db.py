@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect("database.db", check_same_thread=False)
+conn = sqlite3.connect("/tmp/database.db", check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("PRAGMA foreign_keys = ON")

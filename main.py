@@ -482,9 +482,9 @@ def callback_handler(call):
         conn.commit()
 
         bot.edit_message_text(
-            "🗑 Savatcha tozalandi",
-            call.message.chat.id,
-            call.message.message_id
+            text="🗑 Savatcha tozalandi",
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id
         )
 
     elif data == "checkout":

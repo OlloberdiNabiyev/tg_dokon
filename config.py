@@ -1,6 +1,6 @@
 from db import conn
 TOKEN = '8339250229:AAEzQmuyBfUxrYN5g2mufO7pVlVjtLkBKzI'
-ADMINS_ID = [717670705]
+ADMINS_ID = [7746401400]
 USER_ADMIN = 7176707054
 
 def is_admin(user_id):
