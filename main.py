@@ -439,12 +439,17 @@ def callback_handler(call):
 
         cursor.execute("SELECT price FROM products WHERE id=?", (product_id,))
         price = cursor.fetchone()[0]
-
-        bot.edit_message_reply_markup(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            reply_markup=product_inline_keyboard(product_id, count, price)
-        )
+        try:
+            bot.edit_message_reply_markup(
+                chat_id=call.message.chat.id, 
+                message_id=call.message.message_id, 
+                reply_markup=product_inline_keyboard(product_id, count, price)
+            )
+        except Exception as e:
+            if "message is not modified" in str(e):
+                pass
+            else:
+                raise e
 
     elif data.startswith("add_"):
         _, product_id, count = data.split("_")
