@@ -722,8 +722,10 @@ def get_district(message, name, phone, region):
     bot.send_message(message.chat.id, text, reply_markup=markup)
 
 if __name__ == "__main__":
+    import time
     while True:
         try:
-            bot.infinity_polling(timeout=10, long_polling_timeout=5)
+            bot.infinity_polling(timeout=30, long_polling_timeout=15)
         except Exception as e:
             print("ERROR:", e)
+            time.sleep(5)
